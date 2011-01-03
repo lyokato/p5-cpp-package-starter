@@ -9,19 +9,26 @@ use Getopt::Long;
 use Pod::Usage;
 
 my $help = @ARGV == 0;
-my ($project);
+my ($project, $author, $license);
 my %opt = (
     'help|?'      => \$help,
     'project|p=s' => \$project,
+    'author|a=s'  => \$author,
+    'license|l=s' => \$license,
 );
 
 GetOptions(%opt);
 
 pod2usage(1) if $help;
 pod2usage(1) unless $project;
+pod2usage(1) unless $author;
+
+$license ||= q{BSD};
 
 my $starter = CPP::Package::Starter->new(
     project_name => $project,
+    author       => $author,
+    license      => $license,
 );
 
 $starter->gen_package();
@@ -38,11 +45,13 @@ cpppackagestarter - This program allows you to build C++ package template easily
 
 Example:
 
-    cpppackagestarter --project MyProj
+    cpppackagestarter --project MyProj --author example@example.org --license BSD
 
 Options:
 
-    -project Project name (REQUIRED)
+    -project  project name 
+    -author   author name
+    -license  license type (now it supports MIT|APACHE2|BSD)
 
 =head1 DESCRIPTION
 
@@ -65,12 +74,18 @@ the same terms as perl itself.
 use File::Spec ();
 use IO::File ();
 
+use constant LICENSE_MIT     => q{MIT};
+use constant LICENSE_APACHE2 => q{Apache2};
+use constant LICENSE_BSD     => q{BSD};
+
 our $VERSION = '0.01';
 
 sub new {
     my ($class, %args) = @_;
     my $self = bless {
         project_name => "MyLib",
+        author       => q{<author@example.org>},
+        license      => LICENSE_MIT,
         %args, 
     }, $class;
     return $self;
@@ -120,7 +135,6 @@ sub gen_package {
     $self->gen_gtest_dir();
     $self->gen_tests_dir();
     $self->gen_scripts_dir();
-    $self->gen_bin_dir();
     $self->gen_examples_dir();
     $self->print_welcome_message();
 }
@@ -365,6 +379,7 @@ my %opt = (
 GetOptions(%opt);
 
 pod2usage(1) if $help;
+pod2usage(1) unless $name;
 
 my $generator = CPP::Package::Starter::Class->new(
     name        => $name,
@@ -384,7 +399,6 @@ use FindBin;
 END_OF_SCRIPT
 
     $file .= sprintf("use constant PACKAGE_NAME => q{%s};\n", $self->get_package_name());
-
     $file .= <<'END_OF_SCRIPT';
 
 sub new {
@@ -396,6 +410,18 @@ sub new {
         need_test   => 1, 
         %args}, $class;
     return $self;
+}
+
+sub license_text {
+    return q{/*
+END_OF_SCRIPT
+
+    my $license_text = CPP::Package::Starter::License::Factory->gen_license($self->{license}, $self->{author});
+    $file .= $license_text;
+    $file .= <<'END_OF_SCRIPT';
+*/
+
+};
 }
 
 sub _mkfile {
@@ -420,7 +446,6 @@ sub gen {
 sub gen_header {
     my $self = shift;
     my $path = File::Spec->catfile($FindBin::Bin, q{..}, q{include}, PACKAGE_NAME, $self->{name}.".h");
-    # TODO add license text
     my $template = <<'EOF';
 #ifndef _%s_%s_H_
 #define _%s_%s_H_
@@ -429,13 +454,13 @@ namespace %s {
 
 class %s {
 
-};
+}; // end of class
 
 }; // end of namespace
 
 #endif
 EOF
-    my $file = sprintf($template,
+    my $file = $self->license_text() . sprintf($template,
         uc PACKAGE_NAME, uc $self->{name},
         uc PACKAGE_NAME, uc $self->{name},
         PACKAGE_NAME,
@@ -447,7 +472,6 @@ EOF
 sub gen_source {
     my $self = shift;
     my $path = File::Spec->catfile($FindBin::Bin, q{..}, q{src}, $self->{name}.".cpp");
-    # TODO add license text
     my $template = <<'EOF';
 #include "%s/%s.h"
 
@@ -456,7 +480,7 @@ namespace %s {
 }; // end of namespace
 
 EOF
-    my $file = sprintf($template,
+    my $file = $self->license_text() . sprintf($template,
         PACKAGE_NAME, $self->{name},
         PACKAGE_NAME);
     $self->_mkfile($path, \$file);
@@ -465,7 +489,6 @@ EOF
 sub gen_test {
     my $self = shift;
     my $path = File::Spec->catfile($FindBin::Bin, q{..}, q{tests}, $self->{name}."Test.cpp");
-    # TODO add license text
     my $file;
     if ($self->{fixture}) {
 
@@ -557,25 +580,6 @@ END_OF_SCRIPT
     my $genclass_file = File::Spec->catfile($path, q{genclass});
     $self->_mkfile($genclass_file, \$file);
     chmod 0755, $genclass_file;
-}
-
-sub gen_bin_dir {
-    my ($self) = @_;
-    my $path = File::Spec->catdir(File::Spec->curdir,
-        $self->get_project_name(), q{bin});
-    $self->_mkdir($path);
-
-    my $template = <<'EOF';
-INCLUDE_DIRECTORIES(${%s_SOURCE_DIR}/include)
-# ADD_EXECUTABLE(myprogram1 myprogram1.cpp)
-# TARGET_LINK_LIBRARIES(myprogram1 %s)
-# INSTALL(TARGETS myprogram1 DESTINATION bin)
-EOF
-    my $cmake_file = File::Spec->catfile($path, q{CMakeLists.txt});
-    my $proj = $self->get_project_name();
-    my $package = $self->get_package_name();
-    my $file = sprintf($template, $proj, $package);
-    $self->_mkfile($cmake_file, \$file);
 }
 
 sub gen_examples_dir {
@@ -30832,6 +30836,96 @@ sub gen_gtest_files {
     $self->gen_gtest_src_gtest_typed_test($gtest_base_dir);
     $self->gen_gtest_src_gtest($gtest_base_dir);
     $self->gen_gtest_src_gtest_main($gtest_base_dir);
+}
+
+package CPP::Package::Starter::License::Factory;
+
+
+sub gen_license {
+    my ($class, $license_type, $author) = @_;
+
+    my %LICENSE_CLASS_MAP = (
+        MIT     => q{MIT},
+        APACHE2 => q{Apache2},
+        BSD     => q{BSD},
+    );
+
+    my $classname = $LICENSE_CLASS_MAP{uc($license_type)};
+    die "Unknown license type $license_type" unless ($classname);
+
+    my $license_class = q{CPP::Package::Starter::License::}.$classname;
+    my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime();
+    return $license_class->gen_license($author, $year + 1900);
+}
+
+package CPP::Package::Starter::License::MIT;
+
+sub gen_license {
+    my ($class, $author, $year) = @_;
+    my $template = <<END_OF_LICENSE;
+The MIT License
+
+Copyright (c) %04d %s
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+END_OF_LICENSE
+    return sprintf($template, $year, $author);
+}
+
+package CPP::Package::Starter::License::Apache2;
+
+sub gen_license {
+    my ($self, $author, $year) = @_;
+    my $template = <<END_OF_LICENSE;
+Copyright (c) %04d %s
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+END_OF_LICENSE
+    return sprintf($template, $year, $author);
+}
+
+package CPP::Package::Starter::License::BSD;
+
+sub gen_license {
+    my ($self, $author, $year) = @_;
+    my $template = <<END_OF_LICENSE;
+Copyright (c) %04d %s
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+* Neither the name of the <ORGANIZATION> nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+END_OF_LICENSE
+    return sprintf($template, $year, $author);
 }
 
 1;
