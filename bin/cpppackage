@@ -334,13 +334,18 @@ sub gen_tests_dir {
 INCLUDE_DIRECTORIES(${%s_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(${%s_SOURCE_DIR}/gtest/include)
 
-# ADD_EXECUTABLE(MyClassTest MyClassTest.cpp)
-# TARGET_LINK_LIBRARIES(MyClassTest %s gtest gtest-main)
-# ADD_TEST(MyClassTest ${%s_BINARY_DIR}/tests/MyClassTest)
+SET(i 0)
+FILE(GLOB test_files ${%s_SOURCE_DIR}/tests/*Test.cpp)
+FOREACH(filename ${test_files})
+    ADD_EXECUTABLE("Test${i}" ${filename})
+    TARGET_LINK_LIBRARIES("Test${i}" %s gtest gtest-main)
+    ADD_TEST("Test${i}" "${%s_BINARY_DIR}/tests/Test${i}")
+    MATH(EXPR i "${i} + 1")
+ENDFOREACH()
 EOF
     my $proj = $self->get_project_name();
     my $package = $self->get_package_name();
-    my $file = sprintf($template, $proj, $proj, $package, $proj);
+    my $file = sprintf($template, $proj, $proj, $proj, $package, $proj);
     $self->_mkfile($cmake_file, \$file);
 }
 
