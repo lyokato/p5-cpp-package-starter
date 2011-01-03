@@ -1,6 +1,15 @@
 CPP-Package-Starter version 0.01
 ================================
+ INSTALL
+================================
 
+Perl Makefile.PL
+make
+make install
+
+================================
+ USAGE
+================================
 cpppackagestarter --project MyProject
 
 cd MyProject

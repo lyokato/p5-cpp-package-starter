@@ -143,9 +143,9 @@ sub print_welcome_message {
             |____/ \__\__,_|_|   \__\___|_|   
 ================================================================
 
-Completed build your project template.
+Completed to build your project template.
 Now then, move to your project directory,
-and try to make new class!
+and try to make an new class!
 
   cd %s
   ./scripts/genclass --name MyClass
