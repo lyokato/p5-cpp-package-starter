@@ -507,7 +507,7 @@ class %sTest : public testing::Test {
 
 TEST_F(%sTest, helloWorld)
 {
-    EXPECT_EQ("Hello world", "Hello World");
+    EXPECT_EQ("Hello World", "Hello World");
 }
 
 EOF
@@ -523,7 +523,7 @@ EOF
 
 TEST(%sTest, helloWorld)
 {
-    EXPECT_EQ("Hello world", "Hello World");
+    EXPECT_EQ("Hello World", "Hello World");
 }
 
 EOF
