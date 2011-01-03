@@ -1,0 +1,6 @@
+Revision history for Perl extension CPP::Package::Starter.
+
+0.01  Mon Jan  3 18:10:04 2011
+	- original version; created by h2xs 1.23 with options
+		-XA CPP::Package::Starter
+
