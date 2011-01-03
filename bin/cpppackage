@@ -201,7 +201,6 @@ ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(gtest)
 ADD_SUBDIRECTORY(tests)
 ADD_SUBDIRECTORY(examples)
-ADD_SUBDIRECTORY(bin)
 EOF
     my $proj = $self->get_project_name();
     my $file = sprintf($template, $proj, $proj, $proj);
