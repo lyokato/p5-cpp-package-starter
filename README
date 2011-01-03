@@ -10,7 +10,7 @@ make install
 ================================
  USAGE
 ================================
-cpppackagestarter --project MyProject
+cpppackage --project MyProject --author example@example.org
 
 cd MyProject
 ./scripts/genclass --name Foo

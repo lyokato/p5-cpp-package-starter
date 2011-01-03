@@ -37,15 +37,15 @@ package CPP::Package::Starter;
 
 =head1 NAME
 
-cpppackagestarter - This program allows you to build C++ package template easily
+cpppackage - This program allows you to build C++ package template easily
 
 =head1 SYNOPSIS
 
-    cpppackagestarter [options]
+    cpppackage [options]
 
 Example:
 
-    cpppackagestarter --project MyProj --author example@example.org --license BSD
+    cpppackage --project MyProj --author example@example.org --license BSD
 
 Options:
 

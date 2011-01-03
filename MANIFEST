@@ -2,4 +2,4 @@ Changes
 Makefile.PL
 MANIFEST
 README
-bin/cpppackagestarter
+bin/cpppackage
