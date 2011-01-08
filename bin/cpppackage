@@ -561,7 +561,7 @@ Options:
     -name      name of a class
     -nosource  if this flag is on, it doesn't generate source file
     -notest    if this flag is on, it doesn't generate test file
-    -nofixture use fixture or not. see googletest's document.
+    -fixture   use fixture test. see googletest's document.
 
 =head1 DESCRIPTION
 
