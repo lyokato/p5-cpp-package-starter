@@ -371,7 +371,7 @@ my $help = @ARGV == 0;
 my ($name);
 my $source  = 1;
 my $test    = 1;
-my $fixture = 1;
+my $fixture = 0;
 
 my %opt = (
     'help|?'   => \$help,
@@ -460,7 +460,7 @@ class %s {
 
 }; // end of class
 
-}; // end of namespace
+}  // end of namespace
 
 #endif
 EOF
@@ -481,7 +481,7 @@ sub gen_source {
 
 namespace %s {
 
-}; // end of namespace
+}  // end of namespace
 
 EOF
     my $file = $self->license_text() . sprintf($template,
