@@ -1,4 +1,4 @@
-CPP-Package-Starter version 0.01
+CPP-Package-Starter version 0.0.3
 ================================
  INSTALL
 ================================
@@ -12,12 +12,23 @@ make install
 ================================
 cpppackage --project MyProject --author example@example.org
 
-cd MyProject
-./scripts/genclass --name Foo
+cd ./MyProject
+./scripts/genclass --name MyClass1
+./scripts/genclass --name MyClass2 --fixture
+./scripts/genclass --name MyHeaderOnlyClass --nosource
 
 ... and edit class and tests
 
 
 ./scripts/build
 
+
 ./scripts/clean
+
+
+# If you develop on MacOS, you can build Xcode project template
+
+./scripts/xcode
+open ./xcode/MyProject.xcodeproj
+
+
