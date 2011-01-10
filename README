@@ -20,11 +20,9 @@ cd ./MyProject
 ... and edit class and tests
 
 
-./scripts/build
-
-
+./scripts/test
 ./scripts/clean
-
+./scripts/install
 
 # If you develop on MacOS, you can build Xcode project template
 
