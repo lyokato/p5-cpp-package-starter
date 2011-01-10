@@ -5,7 +5,7 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
 use strict;
 use warnings;
 
-our $VERSION = '0.0.1';
+our $VERSION = '0.0.2';
 
 use Getopt::Long;
 use Pod::Usage;
@@ -165,7 +165,13 @@ Now then, move to your project directory,
 and try to make an new class!
 
   cd %s
-  ./scripts/genclass --name MyClass
+  ./scripts/genclass --name MyClass1
+  ./scripts/genclass --name MyClass2
+
+  ./scripts/build
+  (./scripts/build --verbose)
+
+  ./scripts/clean
 
 
 EOF
@@ -364,7 +370,158 @@ sub gen_scripts_dir {
     my $path = File::Spec->catdir(File::Spec->curdir,
         $self->get_project_name(), q{scripts});
     $self->_mkdir($path);
+    $self->gen_genclass_scripts($path);
+    $self->gen_build_scripts($path);
+    $self->gen_clean_scripts($path);
+}
 
+sub gen_build_scripts {
+    my ($self, $path) = @_;
+    my $file = <<'END_OF_SCRIPT';
+#!/usr/bin/env perl
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
+
+use strict;
+use warnings;
+
+use FindBin;
+use File::Find;
+use Getopt::Long;
+use Pod::Usage;
+use IO::Dir;
+
+my $help    = 0;
+my $release = 0;
+my $shared  = 0;
+my $verbose = 0;
+my $prefix;
+
+my %opt = (
+    'help|?'     => \$help,
+    'release|r!' => \$release,
+    'shared|s!'  => \$shared,
+    'verbose|v!' => \$verbose,
+    'prefix|p=s' => \$prefix,
+);
+GetOptions(%opt);
+
+pod2usage(1) if $help;
+
+# build cmake command
+my $command = "cmake ..";
+$command .= sprintf(q{ -DCMAKE_BUILD_TYPE=%s},
+    $release ? 'Release' : 'Debug');
+$command .= sprintf(q{ -DBUILD_SHARED_LIBS=%s},
+    $shared ? 'ON' : 'OFF');
+if ($prefix) {
+    $command .= sprintf(' -DCMAKE_INSTALL_PREFIX=%s',
+        $prefix);
+}
+
+# check build directory
+my $build_dir = "$FindBin::Bin/../build";
+unless (-e $build_dir) {
+    mkdir($build_dir, 0755) or die $1;
+}
+chdir "$FindBin::Bin/../build" or die $!;
+system($command);
+system("make");
+
+
+if ($verbose) {
+    my @tests = ();
+    my $tests_dir = IO::Dir->new('tests');
+    while (defined(my $filename = $tests_dir->read)) {
+        next if (-d $filename);
+        next if ($filename =~ /\.cmake$/);
+        next if ($filename eq 'Makefile');
+        push(@tests, $filename);
+    }
+    for my $test ( @tests ) {
+        system(sprintf("./tests/%s", $test));
+    }
+} else {
+    system("make test");
+}
+
+1;
+__END__
+=head1 NAME
+
+build - This program helps your building workaround.
+
+=head1 SYNOPSIS
+
+    build [options]
+
+Example:
+
+    ./scripts/build --shared
+    ./scripts/build --shared --release
+    ./scripts/build --prefix /usr/local
+    ./scripts/build --verbose
+    ./scripts/build -v -s
+
+Options:
+
+    -prefix  (p) install directory
+    -release (r) if this flag is on, makefile would be generated for Release build. If not, that would be Debug build.
+    -shared  (s) if this flag is on, makefile would be generated for shared-library. If not, that would be static-library.
+    -verbose (v) if this flag is on, print verbose results of google-tests. If not, the test results would be compressed.
+
+=head1 DESCRIPTION
+
+This helps your building workaround.
+
+=head1 AUTHOR
+
+Lyo Kato, E<lt>lyo.kato@gmail.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2010 Lyo Kato. All rights reserved.
+
+This library is free software. You can redistribute it and/or modify it under
+the same terms as perl itself.
+
+=cut
+END_OF_SCRIPT
+    my $genclass_file = File::Spec->catfile($path, q{build});
+    $self->_mkfile($genclass_file, \$file);
+    chmod 0755, $genclass_file;
+}
+
+sub gen_clean_scripts {
+    my ($self, $path) = @_;
+    my $file = <<'END_OF_SCRIPT';
+#!/usr/bin/env perl
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
+
+use strict;
+use warnings;
+
+use FindBin;
+
+my $build_dir = "$FindBin::Bin/../build";
+unless (-e $build_dir) {
+    return;
+}
+print "Removing all files under $build_dir\n";
+system("rm -rf $build_dir");
+mkdir($build_dir, 0755) or die $1;
+print "Completed.\n";
+
+1;
+END_OF_SCRIPT
+    my $genclass_file = File::Spec->catfile($path, q{clean});
+    $self->_mkfile($genclass_file, \$file);
+    chmod 0755, $genclass_file;
+}
+
+sub gen_genclass_scripts {
+    my ($self, $path) = @_;
     my $file = <<'END_OF_SCRIPT';
 #!/usr/bin/env perl
 
