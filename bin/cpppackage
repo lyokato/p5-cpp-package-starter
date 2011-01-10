@@ -5,7 +5,7 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
 use strict;
 use warnings;
 
-our $VERSION = '0.0.2';
+our $VERSION = '0.0.3';
 
 use Getopt::Long;
 use Pod::Usage;
@@ -373,7 +373,44 @@ sub gen_scripts_dir {
     $self->gen_genclass_scripts($path);
     $self->gen_build_scripts($path);
     $self->gen_clean_scripts($path);
+    $self->gen_xcode_scripts($path);
 }
+
+sub gen_xcode_scripts {
+    my ($self, $path) = @_;
+    my $file = <<'END_OF_SCRIPT';
+#!/usr/bin/env perl
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
+
+use strict;
+use warnings;
+
+use FindBin;
+
+# check build directory
+my $build_dir = "$FindBin::Bin/../xcode";
+if (-e $build_dir) {
+    system("rm -rf $build_dir");
+}
+mkdir($build_dir, 0755) or die $1;
+chdir "$FindBin::Bin/../xcode" or die $!;
+
+# build cmake command
+my $command = "cmake -GXcode ..";
+print $command;
+print "\n";
+system($command);
+#system("cmake -DCMAKE_IS_EXPERIMENTAL=YES_I_KNOW ..");
+
+1;
+__END__
+END_OF_SCRIPT
+    my $genclass_file = File::Spec->catfile($path, q{xcode});
+    $self->_mkfile($genclass_file, \$file);
+    chmod 0755, $genclass_file;
+}
+
 
 sub gen_build_scripts {
     my ($self, $path) = @_;
