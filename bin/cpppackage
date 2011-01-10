@@ -5,6 +5,8 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
 use strict;
 use warnings;
 
+our $VERSION = '0.0.1';
+
 use Getopt::Long;
 use Pod::Usage;
 
@@ -334,13 +336,12 @@ sub gen_tests_dir {
 INCLUDE_DIRECTORIES(${%s_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(${%s_SOURCE_DIR}/gtest/include)
 
-SET(i 0)
 FILE(GLOB test_files ${%s_SOURCE_DIR}/tests/*Test.cpp)
 FOREACH(filename ${test_files})
-    ADD_EXECUTABLE("Test${i}" ${filename})
-    TARGET_LINK_LIBRARIES("Test${i}" %s gtest gtest-main)
-    ADD_TEST("Test${i}" "${%s_BINARY_DIR}/tests/Test${i}")
-    MATH(EXPR i "${i} + 1")
+    GET_FILENAME_COMPONENT(testname ${filename} NAME_WE)
+    ADD_EXECUTABLE(${testname} ${filename})
+    TARGET_LINK_LIBRARIES(${testname} %s gtest gtest-main)
+    ADD_TEST(${testname} "${%s_BINARY_DIR}/tests/${testname}")
 ENDFOREACH()
 EOF
     my $proj = $self->get_project_name();
