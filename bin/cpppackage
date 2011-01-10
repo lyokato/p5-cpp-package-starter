@@ -5,7 +5,7 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
 use strict;
 use warnings;
 
-our $VERSION = '0.0.3';
+our $VERSION = '0.0.4';
 
 use Getopt::Long;
 use Pod::Usage;
@@ -164,14 +164,16 @@ Completed to build your project template.
 Now then, move to your project directory,
 and try to make an new class!
 
-  cd %s
+  cd ./%s
   ./scripts/genclass --name MyClass1
   ./scripts/genclass --name MyClass2
 
-  ./scripts/build
-  (./scripts/build --verbose)
+  ./scripts/test
+  (./scripts/test --verbose)
 
   ./scripts/clean
+
+  ./scripts/install
 
 
 EOF
@@ -370,13 +372,209 @@ sub gen_scripts_dir {
     my $path = File::Spec->catdir(File::Spec->curdir,
         $self->get_project_name(), q{scripts});
     $self->_mkdir($path);
-    $self->gen_genclass_scripts($path);
-    $self->gen_build_scripts($path);
-    $self->gen_clean_scripts($path);
-    $self->gen_xcode_scripts($path);
+    $self->gen_genclass_script($path);
+    $self->gen_build_script($path);
+    $self->gen_clean_script($path);
+    $self->gen_test_script($path);
+    $self->gen_install_script($path);
+    $self->gen_xcode_script($path);
 }
 
-sub gen_xcode_scripts {
+sub gen_test_script {
+    my ($self, $path) = @_;
+    my $file = <<'END_OF_SCRIPT';
+#!/usr/bin/env perl
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
+
+use strict;
+use warnings;
+
+use FindBin;
+use File::Find;
+use Getopt::Long;
+use Pod::Usage;
+use IO::Dir;
+
+my $help    = 0;
+my $shared  = 0;
+my $verbose = 0;
+
+my %opt = (
+    'help|?'     => \$help,
+    'shared|s!'  => \$shared,
+    'verbose|v!' => \$verbose,
+);
+GetOptions(%opt);
+
+pod2usage(1) if $help;
+
+# build cmake command
+my $command = "cmake .. -DCMAKE_BUILD_TYPE=Debug";
+$command .= sprintf(q{ -DBUILD_SHARED_LIBS=%s},
+    $shared ? 'ON' : 'OFF');
+
+# check build directory
+my $build_dir = "$FindBin::Bin/../build";
+unless (-e $build_dir) {
+    mkdir($build_dir, 0755) or die $1;
+}
+chdir $build_dir or die $!;
+print $command, "\n";
+system($command);
+print "make\n";
+system("make");
+
+if ($verbose) {
+    my @tests = ();
+    my $tests_dir = IO::Dir->new('tests');
+    while (defined(my $filename = $tests_dir->read)) {
+        next if (-d $filename);
+        next if ($filename =~ /\.cmake$/);
+        next if ($filename eq 'Makefile');
+        push(@tests, $filename);
+    }
+    for my $test ( @tests ) {
+        my $test_command = sprintf("./tests/%s", $test);
+        print $test_command, "\n";
+        system(sprintf($test_command));
+    }
+} else {
+    print "make test\n";
+    system("make test");
+}
+
+1;
+__END__
+=head1 NAME
+
+test - This program helps your building and testing workaround.
+
+=head1 SYNOPSIS
+
+    test [options]
+
+Example:
+
+    ./scripts/test --shared
+    ./scripts/test --verbose
+    ./scripts/test -v -s
+
+Options:
+
+    -shared  (s) if this flag is on, makefile would be generated for shared-library. If not, that would be static-library.
+    -verbose (v) if this flag is on, print verbose results of google-tests. If not, the test results would be compressed.
+
+=head1 DESCRIPTION
+
+This helps your building and testing workaround.
+
+=head1 AUTHOR
+
+Lyo Kato, E<lt>lyo.kato@gmail.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2010 Lyo Kato. All rights reserved.
+
+This library is free software. You can redistribute it and/or modify it under
+the same terms as perl itself.
+
+=cut
+
+END_OF_SCRIPT
+    my $genclass_file = File::Spec->catfile($path, q{test});
+    $self->_mkfile($genclass_file, \$file);
+    chmod 0755, $genclass_file;
+}
+
+sub gen_install_script {
+    my ($self, $path) = @_;
+    my $file = <<'END_OF_SCRIPT';
+#!/usr/bin/env perl
+
+eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
+
+use strict;
+use warnings;
+
+use FindBin;
+use File::Find;
+use Getopt::Long;
+use Pod::Usage;
+use IO::Dir;
+
+my $help    = 0;
+my $shared  = 0;
+
+my %opt = (
+    'help|?'     => \$help,
+    'shared|s!'  => \$shared,
+);
+GetOptions(%opt);
+
+pod2usage(1) if $help;
+
+# build cmake command
+my $command = "cmake .. -DCMAKE_BUILD_TYPE=Release";
+$command .= sprintf(q{ -DBUILD_SHARED_LIBS=%s},
+    $shared ? 'ON' : 'OFF');
+
+# check build directory
+my $build_dir = "$FindBin::Bin/../build";
+unless (-e $build_dir) {
+    mkdir($build_dir, 0755) or die $1;
+}
+chdir $build_dir or die $!;
+print $command, "\n";
+system($command);
+print "make\n";
+system("make");
+
+print "sudo make install\n";
+system("sudo make install");
+
+1;
+__END__
+=head1 NAME
+
+install - This program helps your building and installing workaround.
+
+=head1 SYNOPSIS
+
+    install [options]
+
+Example:
+
+    ./scripts/install --shared
+
+Options:
+
+    -shared  (s) if this flag is on, makefile would be generated for shared-library. If not, that would be static-library.
+
+=head1 DESCRIPTION
+
+This helps your building and installing workaround.
+
+=head1 AUTHOR
+
+Lyo Kato, E<lt>lyo.kato@gmail.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2010 Lyo Kato. All rights reserved.
+
+This library is free software. You can redistribute it and/or modify it under
+the same terms as perl itself.
+
+=cut
+END_OF_SCRIPT
+    my $genclass_file = File::Spec->catfile($path, q{install});
+    $self->_mkfile($genclass_file, \$file);
+    chmod 0755, $genclass_file;
+}
+
+sub gen_xcode_script {
     my ($self, $path) = @_;
     my $file = <<'END_OF_SCRIPT';
 #!/usr/bin/env perl
@@ -393,7 +591,7 @@ my $build_dir = "$FindBin::Bin/../xcode";
 if (-e $build_dir) {
     system("rm -rf $build_dir");
 }
-mkdir($build_dir, 0755) or die $1;
+mkdir($build_dir, 0755) or die $!;
 chdir "$FindBin::Bin/../xcode" or die $!;
 
 # build cmake command
@@ -412,7 +610,7 @@ END_OF_SCRIPT
 }
 
 
-sub gen_build_scripts {
+sub gen_build_script {
     my ($self, $path) = @_;
     my $file = <<'END_OF_SCRIPT';
 #!/usr/bin/env perl
@@ -431,14 +629,12 @@ use IO::Dir;
 my $help    = 0;
 my $release = 0;
 my $shared  = 0;
-my $verbose = 0;
 my $prefix;
 
 my %opt = (
     'help|?'     => \$help,
     'release|r!' => \$release,
     'shared|s!'  => \$shared,
-    'verbose|v!' => \$verbose,
     'prefix|p=s' => \$prefix,
 );
 GetOptions(%opt);
@@ -461,26 +657,11 @@ my $build_dir = "$FindBin::Bin/../build";
 unless (-e $build_dir) {
     mkdir($build_dir, 0755) or die $1;
 }
-chdir "$FindBin::Bin/../build" or die $!;
+chdir $build_dir or die $!;
+print $command, "\n";
 system($command);
+print "make\n";
 system("make");
-
-
-if ($verbose) {
-    my @tests = ();
-    my $tests_dir = IO::Dir->new('tests');
-    while (defined(my $filename = $tests_dir->read)) {
-        next if (-d $filename);
-        next if ($filename =~ /\.cmake$/);
-        next if ($filename eq 'Makefile');
-        push(@tests, $filename);
-    }
-    for my $test ( @tests ) {
-        system(sprintf("./tests/%s", $test));
-    }
-} else {
-    system("make test");
-}
 
 1;
 __END__
@@ -497,19 +678,18 @@ Example:
     ./scripts/build --shared
     ./scripts/build --shared --release
     ./scripts/build --prefix /usr/local
-    ./scripts/build --verbose
-    ./scripts/build -v -s
 
 Options:
 
     -prefix  (p) install directory
     -release (r) if this flag is on, makefile would be generated for Release build. If not, that would be Debug build.
     -shared  (s) if this flag is on, makefile would be generated for shared-library. If not, that would be static-library.
-    -verbose (v) if this flag is on, print verbose results of google-tests. If not, the test results would be compressed.
 
 =head1 DESCRIPTION
 
 This helps your building workaround.
+If you just want to test, think about executing './scripts/test' instead.
+If you just want to install, think about executing './scripts/install' instead.
 
 =head1 AUTHOR
 
@@ -529,7 +709,7 @@ END_OF_SCRIPT
     chmod 0755, $genclass_file;
 }
 
-sub gen_clean_scripts {
+sub gen_clean_script {
     my ($self, $path) = @_;
     my $file = <<'END_OF_SCRIPT';
 #!/usr/bin/env perl
@@ -557,7 +737,7 @@ END_OF_SCRIPT
     chmod 0755, $genclass_file;
 }
 
-sub gen_genclass_scripts {
+sub gen_genclass_script {
     my ($self, $path) = @_;
     my $file = <<'END_OF_SCRIPT';
 #!/usr/bin/env perl
