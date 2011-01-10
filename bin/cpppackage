@@ -130,6 +130,7 @@ sub gen_package {
     $self->gen_project_dir();
     $self->gen_cmake_file();
     $self->gen_readme_file();
+    $self->gen_license_file();
     $self->gen_changelog_file();
     $self->gen_build_dir();
     $self->gen_include_dir();
@@ -206,6 +207,14 @@ ADD_SUBDIRECTORY(examples)
 EOF
     my $proj = $self->get_project_name();
     my $file = sprintf($template, $proj, $proj, $proj);
+    $self->_mkfile($path, \$file);
+}
+
+sub gen_license_file {
+    my ($self) = @_;
+    my $path = File::Spec->catfile(File::Spec->curdir,
+        $self->get_project_name(), q{LICENSE});
+    my $file = CPP::Package::Starter::License::Factory->gen_license($self->{license}, $self->{author});
     $self->_mkfile($path, \$file);
 }
 
