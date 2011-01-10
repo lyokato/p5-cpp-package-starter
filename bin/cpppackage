@@ -296,9 +296,8 @@ sub gen_src_dir {
 INCLUDE_DIRECTORIES(${%s_SOURCE_DIR}/include)
 
 FILE(GLOB src_files ${%s_SOURCE_DIR}/src/*)
-ADD_LIBRARY(%s ${src_files})
-# ADD_LIBRARY(%s SHARED ${src_files})
-# ADD_LIBRARY(%s_static STATIC ${src_files})
+ADD_LIBRARY(%s SHARED ${src_files})
+ADD_LIBRARY(%s_static STATIC ${src_files})
 # SET_TARGET_PROPERTIES(%s_static PROPERTIES OUTPUT_NAME %s)
 
 FILE(GLOB header_files ${%s_SOURCE_DIR}/include/%s/*)
@@ -308,7 +307,7 @@ EOF
     my $proj    = $self->get_project_name();
     my $package = $self->get_package_name();
     my $file = sprintf($template, $proj, $proj,
-            $package, $package, $package, $package, $package, $proj, $package, $package, $package);
+            $package, $package, $package, $package, $proj, $package, $package, $package);
     $self->_mkfile($cmake_file, \$file);
 }
 
@@ -397,12 +396,10 @@ use Pod::Usage;
 use IO::Dir;
 
 my $help    = 0;
-my $shared  = 0;
 my $verbose = 0;
 
 my %opt = (
     'help|?'     => \$help,
-    'shared|s!'  => \$shared,
     'verbose|v!' => \$verbose,
 );
 GetOptions(%opt);
@@ -411,8 +408,6 @@ pod2usage(1) if $help;
 
 # build cmake command
 my $command = "cmake .. -DCMAKE_BUILD_TYPE=Debug";
-$command .= sprintf(q{ -DBUILD_SHARED_LIBS=%s},
-    $shared ? 'ON' : 'OFF');
 
 # check build directory
 my $build_dir = "$FindBin::Bin/../build";
@@ -456,13 +451,11 @@ test - This program helps your building and testing workaround.
 
 Example:
 
-    ./scripts/test --shared
     ./scripts/test --verbose
-    ./scripts/test -v -s
+    ./scripts/test -v 
 
 Options:
 
-    -shared  (s) if this flag is on, makefile would be generated for shared-library. If not, that would be static-library.
     -verbose (v) if this flag is on, print verbose results of google-tests. If not, the test results would be compressed.
 
 =head1 DESCRIPTION
@@ -500,25 +493,10 @@ use warnings;
 
 use FindBin;
 use File::Find;
-use Getopt::Long;
-use Pod::Usage;
 use IO::Dir;
-
-my $help    = 0;
-my $shared  = 0;
-
-my %opt = (
-    'help|?'     => \$help,
-    'shared|s!'  => \$shared,
-);
-GetOptions(%opt);
-
-pod2usage(1) if $help;
 
 # build cmake command
 my $command = "cmake .. -DCMAKE_BUILD_TYPE=Release";
-$command .= sprintf(q{ -DBUILD_SHARED_LIBS=%s},
-    $shared ? 'ON' : 'OFF');
 
 # check build directory
 my $build_dir = "$FindBin::Bin/../build";
@@ -536,36 +514,6 @@ system("sudo make install");
 
 1;
 __END__
-=head1 NAME
-
-install - This program helps your building and installing workaround.
-
-=head1 SYNOPSIS
-
-    install [options]
-
-Example:
-
-    ./scripts/install --shared
-
-Options:
-
-    -shared  (s) if this flag is on, makefile would be generated for shared-library. If not, that would be static-library.
-
-=head1 DESCRIPTION
-
-This helps your building and installing workaround.
-
-=head1 AUTHOR
-
-Lyo Kato, E<lt>lyo.kato@gmail.comE<gt>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright 2010 Lyo Kato. All rights reserved.
-
-This library is free software. You can redistribute it and/or modify it under
-the same terms as perl itself.
 
 =cut
 END_OF_SCRIPT
@@ -628,13 +576,11 @@ use IO::Dir;
 
 my $help    = 0;
 my $release = 0;
-my $shared  = 0;
 my $prefix;
 
 my %opt = (
     'help|?'     => \$help,
     'release|r!' => \$release,
-    'shared|s!'  => \$shared,
     'prefix|p=s' => \$prefix,
 );
 GetOptions(%opt);
@@ -645,8 +591,6 @@ pod2usage(1) if $help;
 my $command = "cmake ..";
 $command .= sprintf(q{ -DCMAKE_BUILD_TYPE=%s},
     $release ? 'Release' : 'Debug');
-$command .= sprintf(q{ -DBUILD_SHARED_LIBS=%s},
-    $shared ? 'ON' : 'OFF');
 if ($prefix) {
     $command .= sprintf(' -DCMAKE_INSTALL_PREFIX=%s',
         $prefix);
@@ -675,15 +619,13 @@ build - This program helps your building workaround.
 
 Example:
 
-    ./scripts/build --shared
-    ./scripts/build --shared --release
+    ./scripts/build --release
     ./scripts/build --prefix /usr/local
 
 Options:
 
     -prefix  (p) install directory
     -release (r) if this flag is on, makefile would be generated for Release build. If not, that would be Debug build.
-    -shared  (s) if this flag is on, makefile would be generated for shared-library. If not, that would be static-library.
 
 =head1 DESCRIPTION
 
