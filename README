@@ -17,9 +17,7 @@ cd MyProject
 
 ... and edit class and tests
 
-cd build
-cmake ..
-make
-make test
-make install
 
+./scripts/build
+
+./scripts/clean
