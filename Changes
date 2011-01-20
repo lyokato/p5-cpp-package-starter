@@ -1,6 +1,10 @@
 Revision history for Perl extension CPP::Package::Starter.
 
-0.01  Mon Jan  3 18:10:04 2011
+0.0.5  Thu Jan 20 12:10:04 2011
+    - now scripts/test can re-build updated-file automatically. see 'reload'
+      option on scripts/test document.
+
+0.0.1  Mon Jan  3 18:10:04 2011
 	- original version; created by h2xs 1.23 with options
 		-XA CPP::Package::Starter
 
