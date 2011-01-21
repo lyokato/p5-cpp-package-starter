@@ -5,7 +5,7 @@ eval 'exec /usr/bin/perl -w -S $0 ${1+"$@"}' if 0;
 use strict;
 use warnings;
 
-our $VERSION = '0.0.5';
+our $VERSION = '0.0.6';
 
 use Getopt::Long;
 use Pod::Usage;
@@ -130,6 +130,7 @@ sub gen_package {
     $self->gen_project_dir();
     $self->gen_cmake_file();
     $self->gen_readme_file();
+    $self->gen_gitignore_file();
     $self->gen_license_file();
     $self->gen_changelog_file();
     $self->gen_build_dir();
@@ -223,6 +224,17 @@ sub gen_license_file {
     my $path = File::Spec->catfile(File::Spec->curdir,
         $self->get_project_name(), q{LICENSE});
     my $file = CPP::Package::Starter::License::Factory->gen_license($self->{license}, $self->{author});
+    $self->_mkfile($path, \$file);
+}
+
+sub gen_gitignore_file {
+    my ($self) = @_;
+    my $path = File::Spec->catfile(File::Spec->curdir,
+        $self->get_project_name(), q{.gitignore});
+    my $file = <<EOF;
+build/*
+build/**/*
+EOF
     $self->_mkfile($path, \$file);
 }
 
@@ -453,7 +465,7 @@ print "1. Waiting for source changes... (press Ctrl+C to interrupt)\n";
 my $build_count = 1;
 
 while (1) {
-    sleep 5;
+    sleep 1;
     if (&find_updated_files()) {
         print "found updated file\n";
         print "start to build\n";
